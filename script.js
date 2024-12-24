@@ -41,47 +41,47 @@ const config = {
   debug: false,
   // Shared
   addAddMutedWordMenuItem: true,
-  alwaysUseLatestTweets: true,
+  alwaysUseLatestTweets: false,
   defaultToLatestSearch: false,
   disableHomeTimeline: false,
   disabledHomeTimelineRedirect: 'notifications',
   disableTweetTextFormatting: false,
   dontUseChirpFont: false,
   dropdownMenuFontWeight: true,
-  fastBlock: true,
-  followButtonStyle: 'monochrome',
+  fastBlock: false,
+  followButtonStyle: 'themed',
   hideAdsNav: true,
   hideBlueReplyFollowedBy: false,
   hideBlueReplyFollowing: false,
   hideBookmarkButton: false,
   hideBookmarkMetrics: true,
   hideBookmarksNav: false,
-  hideCommunitiesNav: false,
-  hideExplorePageContents: true,
+  hideCommunitiesNav: true,
+  hideExplorePageContents: false,
   hideFollowingMetrics: true,
-  hideForYouTimeline: true,
+  hideForYouTimeline: false,
   hideGrokNav: true,
   hideInlinePrompts: true,
   hideJobsNav: true,
-  hideLikeMetrics: true,
+  hideLikeMetrics: false,
   hideListsNav: false,
   hideMetrics: false,
   hideMonetizationNav: true,
-  hideMoreTweets: true,
+  hideMoreTweets: false,
   hideProfileRetweets: false,
-  hideQuoteTweetMetrics: true,
+  hideQuoteTweetMetrics: false,
   hideQuotesFrom: [],
-  hideReplyMetrics: true,
-  hideRetweetMetrics: true,
+  hideReplyMetrics: false,
+  hideRetweetMetrics: false,
   hideSeeNewTweets: false,
   hideShareTweetButton: false,
   hideSubscriptions: true,
   hideTimelineTweetBox: false,
-  hideTotalTweetsMetrics: true,
+  hideTotalTweetsMetrics: false,
   hideTweetAnalyticsLinks: false,
-  hideTwitterBlueReplies: false,
+  hideTwitterBlueReplies: true,
   hideTwitterBlueUpsells: true,
-  hideUnavailableQuoteTweets: true,
+  hideUnavailableQuoteTweets: false,
   hideVerifiedNotificationsTab: true,
   hideViews: true,
   hideWhoToFollowEtc: true,
@@ -101,7 +101,7 @@ const config = {
   showBookmarkButtonUnderFocusedTweets: true,
   sortReplies: 'relevant',
   tweakQuoteTweetsPage: true,
-  twitterBlueChecks: 'replace',
+  twitterBlueChecks: 'ignore',
   unblurSensitiveContent: false,
   uninvertFollowButtons: true,
   // Experiments
@@ -114,7 +114,7 @@ const config = {
   hideExploreNavWithSidebar: true,
   hideMessagesDrawer: true,
   hideProNav: true,
-  hideSidebarContent: true,
+  hideSidebarContent: false,
   hideSpacesNav: false,
   navBaseFontSize: true,
   navDensity: 'default',
@@ -1713,6 +1713,7 @@ const Selectors = {
   TWEET: '[data-testid="tweet"]',
   VERIFIED_TICK: 'svg[data-testid="icon-verified"]',
   X_LOGO_PATH: 'svg path[d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"]',
+  X_LOGO_PATH2: 'svg path[d="M18.436 1.92h3.403l-7.433 8.495 8.745 11.563h-6.849l-5.363-7.012-6.136 7.012H1.4l7.951-9.088L.96 1.92h7.02l4.848 6.41 5.608-6.41zm-1.194 18.021h1.886L6.958 3.851H4.933l12.308 16.09z"]',
 }
 
 /** @enum {string} */
@@ -2168,16 +2169,9 @@ function getStateEntities() {
 }
 
 function getThemeColorFromState() {
-  let localState = getState().settings?.local
-  let color = localState?.themeColor
-  let highContrast = localState?.highContrastEnabled
-  $body.classList.toggle('HighContrast', highContrast)
+  let color = getState()?.settings?.local?.themeColor
   if (color) {
-    if (THEME_COLORS.has(color)) {
-      let colors = THEME_COLORS
-      if (highContrast) colors = getColorScheme() == 'Default' ? HIGH_CONTRAST_LIGHT : HIGH_CONTRAST_DARK
-      return colors.get(color)
-    }
+    if (THEME_COLORS.has(color)) return THEME_COLORS.get(color)
     warn(color, 'not found in THEME_COLORS')
   } else {
     warn('could not get settings.local.themeColor from React state')
@@ -2553,18 +2547,23 @@ async function observeDesktopModalTimeline($popup) {
 const observeFavicon = (() => {
   /** @type {HTMLElement} */
   let $shortcutIcon
+  /** @type {HTMLElement} */
+  let $shortcutIcon2
   /** @type {MutationObserver} */
   let shortcutIconObserver
+  /** @type {MutationObserver} */
+  let shortcutIconObserver2
 
   async function observeFavicon() {
     $shortcutIcon ??= await getElement('link[rel="shortcut icon"]', {name: 'shortcut icon'})
+    $shortcutIcon2 ??= await getElement('link[rel="apple-touch-icon"]', {name: 'apple-touch-icon'})
 
     if (!config.replaceLogo) {
       if (shortcutIconObserver != null) {
         shortcutIconObserver.disconnect()
         shortcutIconObserver = null
         if ($shortcutIcon.getAttribute('href').startsWith('data:')) {
-          $shortcutIcon.setAttribute('href', `//abs.twimg.com/favicons/twitter${currentNotificationCount ? '-pip' : ''}.3.ico`)
+          $shortcutIcon.setAttribute('href', `//abs.twimg.com/favicons/twitter${currentNotificationCount ? '-pip' : ''}.2.ico`)
         }
       }
       return
@@ -2574,6 +2573,14 @@ const observeFavicon = (() => {
       let href = $shortcutIcon.getAttribute('href')
       if (href.startsWith('data:')) return
       $shortcutIcon.setAttribute('href', href.includes('pip') ? Images.TWITTER_PIP_FAVICON : Images.TWITTER_FAVICON)
+    }, 'shortcut icon href', {
+      attributes: true,
+      attributeFilter: ['href']
+    })
+    shortcutIconObserver2 = observeElement($shortcutIcon2, () => {
+      let href = $shortcutIcon2.getAttribute('href')
+      if (href.startsWith('data:')) return
+      $shortcutIcon2.setAttribute('href', href.includes('pip') ? Images.TWITTER_PIP_FAVICON : Images.TWITTER_FAVICON)
     }, 'shortcut icon href', {
       attributes: true,
       attributeFilter: ['href']
@@ -2644,7 +2651,32 @@ const observePopups = (() => {
 async function observeTitle() {
   let $title = await getElement('title', {name: '<title>'})
   observeElement($title, () => {
-    let title = $title.textContent
+    /*
+      The code ".replace(...さんはTwitterを使っています')" was taken from https://github.com/hakuwo/Torimodosu
+
+      MIT License
+      
+      Copyright (c) 2023 Tsumagaki@0rbit-Studio
+      
+      Permission is hereby granted, free of charge, to any person obtaining a copy
+      of this software and associated documentation files (the "Software"), to deal
+      in the Software without restriction, including without limitation the rights
+      to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+      copies of the Software, and to permit persons to whom the Software is
+      furnished to do so, subject to the following conditions:
+      
+      The above copyright notice and this permission notice shall be included in all
+      copies or substantial portions of the Software.
+      
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.
+    */
+    let title = $title.textContent.replace(/(.*)ユーザーの(.+)さん/, '$2さんはTwitterを使っています');
     if (config.replaceLogo && (ltr ? /X$/ : /^(?:\(\d+\+?\) )?X/).test(title)) {
       let newTitle = title.replace(ltr ? /X$/ : 'X', getString('TWITTER'))
       document.title = newTitle
@@ -3133,14 +3165,19 @@ const configureCss = (() => {
       `)
     }
     if (config.hideBookmarkButton) {
-      // Under timeline tweets
+      // The Buffer extension adds a new button in position 2 - use its buffer-inserted class to
+      // avoid hiding the wrong button.
       hideCssSelectors.push(
-        'body:not(.Bookmarks) [data-testid="tweet"][tabindex="0"] [role="group"] > div:has(> button[data-testid$="ookmark"])',
+        // Under timeline tweets
+        'body:not(.Bookmarks) [data-testid="tweet"][tabindex="0"] [role="group"]:not(.buffer-inserted) > div:nth-of-type(5):not(.yeah-button-container)',
+        'body:not(.Bookmarks) [data-testid="tweet"][tabindex="0"] [role="group"].buffer-inserted > div:nth-of-type(6):not(.yeah-button-container)',
+        'body:not(.Bookmarks) [data-testid="tweet"][tabindex="0"] [role="group"] > .yeah-button-container + div',
       )
       if (!config.showBookmarkButtonUnderFocusedTweets) {
-        // Under the focused tweet
         hideCssSelectors.push(
-          '[data-testid="tweet"][tabindex="-1"] [role="group"][id^="id__"] > div:has(> button[data-testid$="ookmark"])',
+          // Under the focused tweet
+          '[data-testid="tweet"][tabindex="-1"] [role="group"][id^="id__"]:not(.buffer-inserted) > div:nth-child(4)',
+          '[data-testid="tweet"][tabindex="-1"] [role="group"][id^="id__"].buffer-inserted > div:nth-child(5)',
         )
       }
     }
@@ -3151,6 +3188,7 @@ const configureCss = (() => {
       hideCssSelectors.push(`${menuRole} a[href$="/bookmarks"]`)
     }
     if (config.hideCommunitiesNav) {
+      hideCssSelectors.push(`a[href$="/communities"]`)
       hideCssSelectors.push(`${menuRole} a[href$="/communities"]`)
     }
     if (config.hideShareTweetButton) {
@@ -3213,6 +3251,7 @@ const configureCss = (() => {
       hideCssSelectors.push(`${menuRole} a:is([href*="ads.twitter.com"], [href*="ads.x.com"])`)
     }
     if (config.hideJobsNav) {
+      hideCssSelectors.push(`a[href="/jobs"]`)
       hideCssSelectors.push(
         // Jobs navigation item
         `${menuRole} a[href="/jobs"]`,
@@ -3248,17 +3287,24 @@ const configureCss = (() => {
       let profileTabsList = `body.OwnProfile:not(.PremiumProfile) ${Selectors.PRIMARY_COLUMN} nav div[role="tablist"]`
       let upsellTabLinks = 'a:is([href$="/highlights"], [href$="/articles"])'
       cssRules.push(`
-        ${profileTabsList} > div:has(> ${upsellTabLinks}) {
-          flex: 0;
-        }
         ${profileTabsList} > div > ${upsellTabLinks} {
           display: none;
+        }
+        @supports selector(:has(*)) {
+          ${profileTabsList} > div:has(> ${upsellTabLinks}) {
+            flex: 0;
+          }
+          .OwnProfile [data-testid="UserName"] > div:has(> div > a[href^="/i/premium"]) {
+            display: none;
+          }
         }
       `)
       // Hide upsell on the Likes tab in your own profile
       cssRules.push(`
-        body.OwnProfile ${Selectors.PRIMARY_COLUMN} nav + div:has(a[href^="/i/premium"]) {
-          display: none;
+        @supports selector(:has(*)) {
+          body.OwnProfile ${Selectors.PRIMARY_COLUMN} nav + div:has(a[href^="/i/premium"]) {
+            display: none;
+          }
         }
       `)
       // Allow Pin and Cancel buttons go to max-width on the pin modal
@@ -3548,9 +3594,12 @@ const configureCss = (() => {
       if (config.hideViews) {
         hideCssSelectors.push(
           // Under timeline tweets
-          '[data-testid="tweet"][tabindex="0"] [role="group"] > div:has(> a[href$="/analytics"])',
+          // The Buffer extension adds a new button in position 2 - use its buffer-inserted class to
+          // avoid hiding the wrong button.
+          '[data-testid="tweet"][tabindex="0"] [role="group"]:not(.buffer-inserted) > div:nth-of-type(4)',
+          '[data-testid="tweet"][tabindex="0"] [role="group"].buffer-inserted > div:nth-of-type(5)',
           // In media modal
-          '[aria-modal="true"] > div > div:first-of-type [role="group"] > div:has(> a[href$="/analytics"])',
+          '[aria-modal="true"] > div > div:first-of-type [role="group"] > div:nth-child(4):not([role="button"])',
         )
       }
       if (config.retweets != 'separate' && config.quoteTweets != 'separate') {
@@ -3603,10 +3652,15 @@ const configureCss = (() => {
       }
       if (config.hideViews) {
         hideCssSelectors.push(
-          // Under timeline tweets
-          '[data-testid="tweet"][tabindex="0"] [role="group"] > div:has(> a[href$="/analytics"])',
+          // Under timeline tweets - views only display on mobile at larger widths on mobile
+          // When only the Share button is also displayed - 4th of 5
+          '[data-testid="tweet"][tabindex="0"] [role="group"]:not(.buffer-inserted) > div:nth-child(4):nth-last-child(2)',
+          '[data-testid="tweet"][tabindex="0"] [role="group"].buffer-inserted > div:nth-child(5):nth-last-child(2)',
+          // When the Bookmark and Share buttons are also displayed - 4th of 6
+          '[data-testid="tweet"][tabindex="0"] [role="group"]:not(.buffer-inserted) > div:nth-child(4):nth-last-child(3)',
+          '[data-testid="tweet"][tabindex="0"] [role="group"].buffer-inserted > div:nth-child(5):nth-last-child(3)',
           // In media modal
-          'body.MobileMedia [role="group"] > div:has(> a[href$="/analytics"])',
+          'body.MobileMedia [role="group"] > div:nth-child(4)',
         )
       }
       //#endregion
@@ -3796,7 +3850,7 @@ const configureThemeCss = (() => {
 
     if (config.replaceLogo) {
       cssRules.push(`
-        ${Selectors.X_LOGO_PATH} {
+        ${Selectors.X_LOGO_PATH}, ${Selectors.X_LOGO_PATH2} {
           fill: ${THEME_BLUE};
           d: path("${Svgs.TWITTER_LOGO_PATH}");
         }
@@ -4886,7 +4940,7 @@ function processBlueChecks($el) {
  * Processes all Twitter logos inside an element.
  */
 function processTwitterLogos($el) {
-  for (let $svgPath of $el.querySelectorAll(Selectors.X_LOGO_PATH)) {
+  for (let $svgPath of $el.querySelectorAll(`${Selectors.X_LOGO_PATH}, ${Selectors.X_LOGO_PATH2}`)) {
     twitterLogo($svgPath)
   }
 }
@@ -5435,6 +5489,10 @@ async function tweakDesktopLogo() {
   if ($logoPath) {
     twitterLogo($logoPath)
   }
+  $logoPath = await getElement(`h1 ${Selectors.X_LOGO_PATH2}`, {name: 'desktop nav logo', timeout: 5000})
+  if ($logoPath) {
+    twitterLogo($logoPath)
+  }
 }
 
 async function tweakHomeIcon() {
@@ -5869,7 +5927,7 @@ async function main() {
       $loadingStyle.dataset.insertedBy = 'control-panel-for-twitter'
       $loadingStyle.dataset.role = 'loading-logo'
       $loadingStyle.textContent = dedent(`
-        ${Selectors.X_LOGO_PATH} {
+        ${Selectors.X_LOGO_PATH}, ${Selectors.X_LOGO_PATH2} {
           fill: ${isSafari ? 'transparent' : THEME_BLUE};
           d: path("${Svgs.TWITTER_LOGO_PATH}");
         }
@@ -5882,6 +5940,11 @@ async function main() {
 
     if (isSafari) {
       getElement(Selectors.X_LOGO_PATH, {name: 'pre-loading indicator logo', timeout: 1000}).then(($logoPath) => {
+        if ($logoPath) {
+          twitterLogo($logoPath)
+        }
+      })
+      getElement(Selectors.X_LOGO_PATH2, {name: 'pre-loading indicator logo', timeout: 1000}).then(($logoPath) => {
         if ($logoPath) {
           twitterLogo($logoPath)
         }
